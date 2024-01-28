@@ -6,28 +6,30 @@ import com.polarbookshop.orderservice.order.event.OrderAcceptedMessage;
 import com.polarbookshop.orderservice.order.event.OrderDispatchedMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 @Service
 public class OrderService {
 
 	private static final Logger log = LoggerFactory.getLogger(OrderService.class);
+
 	private final BookClient bookClient;
 	private final OrderRepository orderRepository;
 	private final StreamBridge streamBridge;
 
-	public OrderService(BookClient bookClient, OrderRepository orderRepository, StreamBridge streamBridge) {
+	public OrderService(BookClient bookClient, StreamBridge streamBridge, OrderRepository orderRepository) {
 		this.bookClient = bookClient;
 		this.orderRepository = orderRepository;
-        this.streamBridge = streamBridge;
-    }
+		this.streamBridge = streamBridge;
+	}
 
-	public Flux<Order> getAllOrders() {
-		return orderRepository.findAll();
+	public Flux<Order> getAllOrders(String userId) {
+		return orderRepository.findAllByCreatedBy(userId);
 	}
 
 	@Transactional
@@ -74,8 +76,11 @@ public class OrderService {
 				existingOrder.quantity(),
 				OrderStatus.DISPATCHED,
 				existingOrder.createdDate(),
+				existingOrder.createdBy(),
 				existingOrder.lastModifiedDate(),
+				existingOrder.lastModifiedBy(),
 				existingOrder.version()
 		);
 	}
+
 }
